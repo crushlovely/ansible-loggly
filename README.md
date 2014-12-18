@@ -1,4 +1,4 @@
-# Ansible role to install Logrotate
+# Ansible role to Install Loggly
 
 [![Build Status](http://img.shields.io/travis/crushlovely/ansible-loggly.svg?style=flat)](https://travis-ci.org/crushlovely/ansible-loggly)
 [![Current Version](http://img.shields.io/github/release/crushlovely/ansible-loggly.svg?style=flat)](https://galaxy.ansible.com/list#/roles/1180)
