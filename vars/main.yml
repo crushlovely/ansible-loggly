@@ -1,0 +1,1 @@
+log_path: "{{ app_path }}/shared/log/"

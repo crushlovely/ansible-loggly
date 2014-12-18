@@ -1,0 +1,61 @@
+---
+- name: Ensure aws tools are updated in repository
+  apt_repository: repo='ppa:awstools-dev/awstools'
+  sudo: yes
+
+- name: Update apt
+  apt: update_cache=yes
+  sudo: yes
+
+- name: Ensure API tool are installed
+  apt: pkg=ec2-api-tools state=present
+  sudo: yes
+
+- name: Gather facts from EC2
+  shell: ec2-describe-instances -O {{ ec2_access_key }} -W {{ ec2_secret_key }} --filter "private-dns-name={{ ansible_fqdn }}" --filter "tag-key=Name" | grep Name | echo `awk '{print $5}'`
+  register: loggly_hostname
+
+- debug: var=loggly_hostname.stdout
+
+- name: Replace hostname file
+  template: src=hostname.j2 dest=/etc/hostname owner=root group=root backup=yes
+  sudo: yes
+
+- name: host is in the hosts file
+  lineinfile: dest=/etc/hosts state=present backup=yes regexp='^127.0.0.1' line='127.0.0.1 {{ loggly_hostname.stdout | regex_replace('_', '-') }} localhost'
+  sudo: yes
+
+- name: restart hostname
+  shell: /bin/hostname -F /etc/hostname
+  sudo: yes
+
+- name: Add rsyslog to Apt Repository
+  apt_repository: repo='ppa:adiscon/v8-stable'
+  sudo: yes
+
+- name: Updat Apt Packages
+  apt: name=rsyslog update_cache=yes
+  sudo: yes
+
+- name: Install rsyslog-gnutls
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - rsyslog
+    - rsyslog-gnutls
+  sudo: yes
+
+- name: Download install Script
+  get_url: url=https://www.loggly.com/install/configure-linux.sh dest=/tmp/configure-linux.sh
+
+- name: Configure Loggly
+  shell: sudo /bin/bash /tmp/configure-linux.sh -a {{ loggly_account_name }} -t {{ loggly_token }} -u {{ loggly_username }} -p {{ loggly_password }}
+  sudo: yes
+
+- name: copy app conf file
+  template: src=21-app-loggly.conf.j2 dest=/etc/rsyslog.d/21-{{ item.log_name }}-loggly.conf owner=root group=root force=yes
+  with_items:
+    - { log_name: {{ app_name }} }
+    - { log_name: express }
+  sudo: yes
+  notify:
+    - restart rsyslog

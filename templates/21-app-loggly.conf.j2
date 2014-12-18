@@ -1,0 +1,18 @@
+$ModLoad imfile
+$InputFilePollInterval 5
+$WorkDirectory /var/spool/rsyslog
+$PrivDropToGroup adm
+
+# {{ app_name }} Status file:
+$InputFileName {{ log_path }}{{ item.log_name }}.log
+$InputFileTag {{ item.log_name }}-log:
+$InputFileStateFile stat-{{ item.log_name }}-log
+$InputFileSeverity info
+$InputFilePersistStateInterval 1
+$InputRunFileMonitor
+
+#Add a tag for {{ app_name }} events
+$template LogglyFormatFile,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %hostname% %app-name% %procid% %msgid% [{{ loggly_token }}@41058 tag=\"{{ app_name }}-{{ server_env }}\"] %msg%\n"
+
+if $programname == '{{ item.log_name }}-log' then @@logs-01.loggly.com:514;LogglyFormatFile
+if $programname == '{{ item.log_name }}-log' then ~
